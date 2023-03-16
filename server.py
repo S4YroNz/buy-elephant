@@ -25,7 +25,7 @@ logging.basicConfig(level=logging.INFO)
 # Когда он откажется купить слона,
 # то мы уберем одну подсказку. Как будто что-то меняется :)
 sessionStorage = {}
-sessionStorage['buy_rabbit'] = False
+buy_rabbit = False
 
 
 @app.route('/post', methods=['POST'])
@@ -57,6 +57,7 @@ def main():
 
 
 def handle_dialog(req, res):
+    global buy_rabbit
     user_id = req['session']['user_id']
 
     if req['session']['new']:
@@ -85,7 +86,7 @@ def handle_dialog(req, res):
     # Если он написал 'ладно', 'куплю', 'покупаю', 'хорошо',
     # то мы считаем, что пользователь согласился.
     # Подумайте, всё ли в этом фрагменте написано "красиво"?
-    if not sessionStorage['buy_rabbit']:
+    if not buy_rabbit:
         if req['request']['original_utterance'].lower() in [
             'ладно',
             'куплю',
@@ -95,9 +96,9 @@ def handle_dialog(req, res):
             'я куплю'
         ]:
             # Пользователь согласился, прощаемся.
-            res['response']['text'] = 'Слона можно найти на Яндекс.Маркете!'
+            res['response']['text'] = 'Слона можно найти на Яндекс.Маркете!\nНо зачем тебе слон? Купи себе кролика!'
             res['response']['end_session'] = False
-            sessionStorage['buy_rabbit'] = True
+            buy_rabbit = True
             sessionStorage[user_id] = {
                 'suggests': [
                     "Не хочу.",
@@ -105,6 +106,7 @@ def handle_dialog(req, res):
                     "Отстань!",
                 ]
             }
+            res['response']['buttons'] = get_suggests(user_id)
             return
 
         # Если нет, то убеждаем его купить слона!
@@ -122,6 +124,7 @@ def handle_dialog(req, res):
             # Пользователь согласился, прощаемся.
             res['response']['text'] = 'Кролика можно найти на Яндекс.Маркете!'
             res['response']['end_session'] = True
+            buy_rabbit = False
             return
 
         # Если нет, то убеждаем его купить слона!
@@ -133,6 +136,7 @@ def handle_dialog(req, res):
 
 # Функция возвращает две подсказки для ответа.
 def get_suggests(user_id):
+    global buy_rabbit
     session = sessionStorage[user_id]
 
     # Выбираем две первые подсказки из массива.
@@ -148,7 +152,7 @@ def get_suggests(user_id):
     # Если осталась только одна подсказка, предлагаем подсказку
     # со ссылкой на Яндекс.Маркет.
     if len(suggests) < 2:
-        if not sessionStorage['buy_rabbit']:
+        if not buy_rabbit:
             suggests.append({
                 "title": "Ладно",
                 "url": "https://market.yandex.ru/search?text=слон",
